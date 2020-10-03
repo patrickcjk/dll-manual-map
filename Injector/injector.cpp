@@ -63,7 +63,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	/* Check file signature */
 	if (reinterpret_cast<IMAGE_DOS_HEADER*>(buffer)->e_magic != 0x5A4D)
 	{
-		//printf("Invalid file\n");
 		std::cout << ERROR << "OOPS! We ran into some problems... #491" << std::endl;
 		free(buffer);
 		return false;
@@ -77,7 +76,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	/* Check platform */
 	if (pOldFileHeader->Machine != CURRENT_ARCH)
 	{
-		//printf("Invalid platform\n");
 		std::cout << ERROR << "OOPS! We ran into some problems... #492" << std::endl;
 		free(buffer);
 		return false;
@@ -87,7 +85,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	PBYTE pTargetBase = reinterpret_cast<PBYTE>(VirtualAllocEx(process_handle, nullptr, pOldOptHeader->SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
 	if (!pTargetBase)
 	{
-		//printf("Target process memory allocation failed (ex) 0x%X\n", GetLastError());
 		std::cout << ERROR << "OOPS! We ran into some problems... #493 (" << GetLastError() << ")" << std::endl;
 		free(buffer);
 		return false;
@@ -135,7 +132,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	PBYTE mmap_data_buffer = reinterpret_cast<PBYTE>(VirtualAllocEx(process_handle, nullptr, sizeof(MANUAL_MAPPING_DATA), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
 	if (!mmap_data_buffer)
 	{
-		//printf("Target process mapping allocation failed (ex) 0x%X\n", GetLastError());
 		std::cout << ERROR << "OOPS! We ran into some problems... #496 (" << GetLastError() << ")" << std::endl;
 		free(buffer);
 		return false;
@@ -146,7 +142,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	/* Write our functions */
 	if (!WriteProcessMemory(process_handle, mmap_data_buffer, &data, sizeof(MANUAL_MAPPING_DATA), nullptr))
 	{
-		//printf("Can't write mapping 0x%X\n", GetLastError());
 		std::cout << ERROR << "OOPS! We ran into some problems... #497 (" << GetLastError() << ")" << std::endl;
 		free(buffer);
 		return false;
@@ -158,7 +153,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	void* pShellcode = VirtualAllocEx(process_handle, nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!pShellcode) 
 	{
-		//printf("Memory shellcode allocation failed (ex) 0x%X\n", GetLastError());
 		std::cout << ERROR << "OOPS! We ran into some problems... #498 (" << GetLastError() << ")" << std::endl;
 		VirtualFreeEx(process_handle, pTargetBase, 0, MEM_RELEASE);
 		VirtualFreeEx(process_handle, mmap_data_buffer, 0, MEM_RELEASE);
@@ -171,7 +165,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	/* Write our shellcode */
 	if (!WriteProcessMemory(process_handle, pShellcode, Shellcode, 0x1000, nullptr))
 	{
-		//printf("Can't write shellcode 0x%X\n", GetLastError());
 		std::cout << ERROR << "OOPS! We ran into some problems... #499 (" << GetLastError() << ")" << std::endl;
 		free(buffer);
 		return false;
@@ -179,17 +172,10 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 
 	std::cout << SUCCESS << "Mapped shellcode" << std::endl;
 
-#ifdef _DEBUG
-	//printf("My shellcode pointer %p\n", Shellcode);
-	//printf("Target point %p\n", pShellcode);
-	//system("pause");
-#endif
-
 	/* Create thread */
 	HANDLE hThread = CreateRemoteThread(process_handle, nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(pShellcode), mmap_data_buffer, 0, nullptr);
 	if (!hThread) 
 	{
-		//printf("Thread creation failed 0x%X\n", GetLastError());
 		std::cout << ERROR << "OOPS! We ran into some problems... #500 (" << GetLastError() << ")" << std::endl;
 
 		VirtualFreeEx(process_handle, pTargetBase, 0, MEM_RELEASE);
@@ -215,7 +201,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 
 		if (exitcode != STILL_ACTIVE) 
 		{
-			//printf("Process crashed, exit code: %d\n", exitcode);
 			std::cout << ERROR << "OOPS! We ran into some problems... #501 (" << exitcode << ")" << std::endl;
 			free(buffer);
 			return false;
@@ -227,14 +212,12 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 
 		if (hCheck == (HINSTANCE)0x404040) 
 		{
-			//printf("Wrong mapping ptr\n");
 			std::cout << ERROR << "OOPS! We ran into some problems... #502" << std::endl;
 			free(buffer);
 			return false;
 		}
 		else if (hCheck == (HINSTANCE)0x606060) 
 		{
-			//printf("Wrong directory base relocation\n");
 			std::cout << ERROR << "OOPS! We ran into some problems... #503" << std::endl;
 			free(buffer);
 			return false;
@@ -252,7 +235,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	/* Write empty buffer */
 	if (!WriteProcessMemory(process_handle, pTargetBase, emptyBuffer, 0x1000, nullptr))
 	{
-		//printf("WARNING!: Can't clear HEADER\n");
 		std::cout << WARNING << "If you see this message please reboot your system and try again" << std::endl;
 	}
 
@@ -260,7 +242,6 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 	PBYTE emptyBuffer2 = reinterpret_cast<PBYTE>(malloc(1024 * 1024));
 	if (!emptyBuffer2) 
 	{
-		//printf("Unable to allocate memory\n");
 		std::cout << ERROR << "OOPS! We ran into some problems... #504" << std::endl;
 		free(buffer);
 		return false;
@@ -278,12 +259,9 @@ bool ManualMap(HANDLE process_handle, const char* binary_path)
 		
 		if (strcmp((char*)pSectionHeader->Name, ".pdata") == 0 || strcmp((char*)pSectionHeader->Name, ".rsrc") == 0 || strcmp((char*)pSectionHeader->Name, ".reloc") == 0) 
 		{
-			//  || strcmp((char*)pSectionHeader->Name, ".rdata") == 0 ) {
-			//printf("Processing %s removal\n", pSectionHeader->Name);
-				
 			if (!WriteProcessMemory(process_handle, pTargetBase + pSectionHeader->VirtualAddress, emptyBuffer2, pSectionHeader->SizeOfRawData, nullptr))
 			{
-				//printf("Can't clear section %s: 0x%x\n", pSectionHeader->Name, GetLastError());
+				//...
 			}
 		}
 	}
